@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # Forge HAAS Talker
+=======
+# HAAStalker — tool tracking skeleton
+>>>>>>> 9f07dc7a892cfeff6b6051fae1cbf11bd3e6644d
 
 A Raspberry Pi on each HAAS machine shows the operator which tools are loaded, which to swap, and
 what part runs next. The Pi builds that page itself, so the screen keeps working when the network
