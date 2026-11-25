@@ -1,0 +1,31 @@
+{
+  "machine_id": "haas-vf2-01",
+  "parts": [
+    {
+      "part_number": "BRKT-303",
+      "cycle_s": 240,
+      "material": "303 SUS",
+      "tools": [99, 120, 130, 150, 20, 29, 113, 283],
+      "files": ["files/BRKT-303/bracket.step", "files/BRKT-303/bracket.pdf", "files/BRKT-303/bracket.png"]
+    },
+    {
+      "part_number": "MNT-6061",
+      "cycle_s": 95,
+      "material": "6061-T6 AL",
+      "tools": [99, 15, 16, 108, 18, 19],
+      "files": ["files/MNT-6061/mount.step", "files/MNT-6061/mount.pdf", "files/MNT-6061/mount.png"]
+    },
+    {
+      "part_number": "HSG-17-4",
+      "cycle_s": 900,
+      "material": "17-4 PH SS",
+      "tools": [99, 90, 17, 327, 350, 366],
+      "files": ["files/HSG-17-4/housing.step", "files/HSG-17-4/housing.pdf", "files/HSG-17-4/housing.png"]
+    }
+  ],
+  "jobs": [
+    { "order_number": "1616", "line_number": 1, "part_number": "BRKT-303", "quantity": 30, "machinist": "Miraj", "due_in_days": -1 },
+    { "order_number": "1622", "line_number": 2, "part_number": "MNT-6061", "quantity": 120, "machinist": "Miraj", "due_in_days": 3 },
+    { "order_number": "1630", "line_number": 1, "part_number": "HSG-17-4", "quantity": 8, "machinist": "Dana", "due_in_days": 6 }
+  ]
+}

@@ -1,0 +1,103 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: forge
+      POSTGRES_PASSWORD: forge
+      POSTGRES_DB: forge
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "forge"]
+      interval: 2s
+      retries: 30
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    # Enable MQTT on top of the stock image.
+    command: ["bash", "-c", "rabbitmq-plugins enable --offline rabbitmq_mqtt && exec docker-entrypoint.sh rabbitmq-server"]
+    environment:
+      RABBITMQ_DEFAULT_USER: forge
+      RABBITMQ_DEFAULT_PASS: forge
+    ports:
+      - "15672:15672" # management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      retries: 30
+
+  # S3-compatible object storage for part files (STEP, PDF, images). Swap for AWS S3 in production.
+  # (MinIO no longer publishes images on Docker Hub; Bitnami's archived build is the easiest to pull.)
+  minio:
+    image: bitnamilegacy/minio:2025.5.24
+    environment:
+      MINIO_ROOT_USER: forge
+      MINIO_ROOT_PASSWORD: forge-secret
+      MINIO_SITE_REGION: ca-central-1
+    ports:
+      - "9000:9000" # S3 API (signed download links point here)
+      - "9001:9001" # MinIO console
+    volumes:
+      - minio-data:/bitnami/minio/data
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:9000/minio/health/live"]
+      interval: 2s
+      retries: 30
+
+  backend:
+    build: { context: ., target: backend }
+    environment:
+      DATABASE_URL: postgresql+psycopg://forge:forge@postgres:5432/forge
+      MQTT_HOST: rabbitmq
+      RELEASES_DIR: /releases
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
+      S3_REGION: ca-central-1
+      S3_ACCESS_KEY: forge
+      S3_SECRET_KEY: forge-secret
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./releases:/releases:ro # Pi OTA releases from source/edge/build-release.sh
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      minio: { condition: service_healthy }
+
+  # Reads the machine-event stream in RabbitMQ into Postgres (the office's activity feed).
+  # A separate consumer, to show that streams fan out: more consumers can read the same events.
+  telemetry:
+    build: { context: ., target: backend }
+    command: ["python", "-m", "backend.telemetry"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://forge:forge@postgres:5432/forge
+      AMQP_URL: amqp://forge:forge@rabbitmq:5672/%2F
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  # The office web app (stand-in for Forge's web system): upload parts, queue jobs. Its own server.
+  web:
+    build: { context: ., target: web }
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  # Simulates the Raspberry Pi on one machine. Open http://localhost:8080 for its kiosk.
+  agent:
+    build: { context: ., target: agent }
+    environment:
+      MACHINE_ID: haas-vf2-01
+      MACHINE_TOKEN: dev-token
+      BACKEND_URL: http://backend:8000
+      MQTT_HOST: rabbitmq
+    ports:
+      - "8080:8080"
+    volumes:
+      - agent-data:/data
+
+volumes:
+  pgdata:
+  agent-data:
+  minio-data:

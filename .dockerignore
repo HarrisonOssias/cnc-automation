@@ -1,0 +1,8 @@
+.venv
+data
+releases
+**/__pycache__
+**/*.egg-info
+**/node_modules
+**/dist
+.pytest_cache

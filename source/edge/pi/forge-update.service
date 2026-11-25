@@ -1,0 +1,9 @@
+# /etc/systemd/system/forge-update.service — one OTA check. Started by forge-update.timer.
+[Unit]
+Description=Forge OTA update check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/forge/current/source/edge/pi/update.sh

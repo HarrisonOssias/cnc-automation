@@ -1,0 +1,13 @@
+# /etc/systemd/system/forge-update.timer
+# Check for a new release 5 min after boot, then every 30 min. The random delay spreads
+# 150 Pis out so a new release rolls through the shop gradually instead of all at once.
+[Unit]
+Description=Forge OTA update check
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

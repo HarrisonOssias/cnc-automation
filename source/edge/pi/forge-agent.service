@@ -1,0 +1,23 @@
+# /etc/systemd/system/forge-agent.service
+[Unit]
+Description=Forge HAAS agent
+# Not network-online.target: the agent must start (and run the kiosk) with no network.
+After=network.target
+
+[Service]
+Type=notify
+User=forge
+# /opt/forge/current is a symlink to the active release; update.sh switches it.
+WorkingDirectory=/opt/forge/current
+EnvironmentFile=/etc/forge/agent.env
+Environment=KIOSK_DIR=/opt/forge/current/source/edge/kiosk/dist
+ExecStart=/opt/forge/current/venv/bin/python -m agent serve
+StateDirectory=forge
+Restart=always
+RestartSec=2
+# The agent pings systemd every sync loop; if it hangs, systemd restarts it.
+WatchdogSec=30
+NotifyAccess=main
+
+[Install]
+WantedBy=multi-user.target
