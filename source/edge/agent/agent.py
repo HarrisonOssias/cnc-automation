@@ -509,6 +509,9 @@ class Agent:
     async def sync_loop(self) -> None:
         self.notify.notify("READY=1")
         while True:
+            # Clear before the pass, not after: a notice that arrives mid-pass then wakes the next pass
+            # at once, instead of waiting out the idle timeout.
+            self.wake.clear()
             try:
                 called = await self.flush_pending()
                 called = await self.flush_completions() or called
@@ -524,7 +527,6 @@ class Agent:
                 self.set_online(False)
             self.broadcast()
             self.notify.notify("WATCHDOG=1")
-            self.wake.clear()
             busy = self.store.pending() or any(not acked for _, _, acked in self.store.completions())
             idle = SYNC_INTERVAL_S if (not self.online or busy) else HEALTH_INTERVAL_S
             try:
@@ -565,13 +567,19 @@ class Agent:
         return sent
 
     async def fetch_bundle(self) -> None:
-        r = await self.http.get(f"/machines/{self.cfg.machine_id}/bundle")
-        r.raise_for_status()
+        # Cleared before the request: a bundle_changed that arrives while it's in flight marks it stale
+        # again, since this response may predate that change.
+        self.bundle_stale = False
+        try:
+            r = await self.http.get(f"/machines/{self.cfg.machine_id}/bundle")
+            r.raise_for_status()
+        except httpx.HTTPError:
+            self.bundle_stale = True
+            raise
         bundle = Bundle.model_validate(r.json())
         self.store.save_bundle(bundle)
         self.store.prune_completions({j.id for j in bundle.jobs})
         self.sync_session()
-        self.bundle_stale = False
         self.last_bundle_check = time.monotonic()
         log.info("bundle v%d fetched (%d jobs)", bundle.version, len(bundle.jobs))
 

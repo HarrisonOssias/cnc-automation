@@ -309,7 +309,7 @@ def healthz():
 
 @app.get("/machines")
 def list_machines(session: DB):
-    rows = session.execute(select(Machine, MachineStatus).outerjoin(MachineStatus)).all()
+    rows = session.execute(select(Machine, MachineStatus).outerjoin(MachineStatus).order_by(Machine.id)).all()
     return [
         {
             "id": m.id,

@@ -26,6 +26,10 @@
   "jobs": [
     { "order_number": "1616", "line_number": 1, "part_number": "BRKT-303", "quantity": 30, "machinist": "Miraj", "due_in_days": -1 },
     { "order_number": "1622", "line_number": 2, "part_number": "MNT-6061", "quantity": 120, "machinist": "Miraj", "due_in_days": 3 },
-    { "order_number": "1630", "line_number": 1, "part_number": "HSG-17-4", "quantity": 8, "machinist": "Dana", "due_in_days": 6 }
+    { "order_number": "1630", "line_number": 1, "part_number": "HSG-17-4", "quantity": 8, "machinist": "Dana", "due_in_days": 6 },
+    { "order_number": "1624", "line_number": 1, "part_number": "MNT-6061", "quantity": 60, "machinist": "Priya", "due_in_days": 1, "machine_id": "haas-vf2-02" },
+    { "order_number": "1631", "line_number": 3, "part_number": "BRKT-303", "quantity": 20, "machinist": "Priya", "due_in_days": 5, "machine_id": "haas-vf2-02" },
+    { "order_number": "1628", "line_number": 2, "part_number": "HSG-17-4", "quantity": 12, "machinist": "Dana", "due_in_days": 2, "machine_id": "haas-vf4-01" },
+    { "order_number": "1633", "line_number": 1, "part_number": "MNT-6061", "quantity": 40, "machinist": "Dana", "due_in_days": 7, "machine_id": "haas-vf4-01" }
   ]
 }

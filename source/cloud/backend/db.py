@@ -199,13 +199,19 @@ class MachinePresence(Base):
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
-# --- Seed data: the machine and its tools, matching the production screenshot.
+# --- Seed data: the machines and their tools. Machine #1 matches the production screenshot; the
+# others are extra simulated Pis (docker-compose runs one agent per machine). Every machine keeps its
+# core tools in the same indexes as the screenshot (10, 23-31), but one core tool differs per machine.
+# Each extra Pi's starting tool table (HAAS_STUB_TABLE in docker-compose.yml) matches its core tools.
 # Parts, files and jobs are loaded through the API by demo/load.py, like the real web system would.
 
-SEED_MACHINE_ID = os.environ.get("SEED_MACHINE_ID", "haas-vf2-01")
-SEED_MACHINE_TOKEN = os.environ.get("SEED_MACHINE_TOKEN", "dev-token")
-
 CORE_TOOLS = {10: 99, 23: 100, 24: 159, 25: 15, 26: 16, 27: 17, 28: 18, 29: 19, 30: 20, 31: 90}
+MACHINES = [
+    # (id, name, token, core tools {index: tool number})
+    ("haas-vf2-01", "HAAS VF-2 #1", "dev-token", CORE_TOOLS),
+    ("haas-vf2-02", "HAAS VF-2 #2", "dev-token-2", {**CORE_TOOLS, 27: 108}),  # T108 3/4 endmill, not T17
+    ("haas-vf4-01", "HAAS VF-4 #1", "dev-token-3", {**CORE_TOOLS, 28: 350}),  # T350 boring bar, not T18
+]
 TOOLS = {
     15: "1/4 endmill 3FL", 16: "3/8 endmill 3FL", 17: "1/2 endmill 3FL", 18: "#7 drill",
     19: "1/4-20 tap", 20: "1/2 spot drill", 27: "3/16 ball mill", 29: "1/8 endmill 2FL",
@@ -219,15 +225,20 @@ UNMEASURED = {113, 283}  # new tools waiting at the presetter
 
 
 def seed(session: Session) -> None:
-    if session.scalar(select(Machine).limit(1)):
-        return
+    """Add any seed machine (and the tool list) that isn't there yet, so an existing database picks up
+    machines added later without a reset. Machines already present are left as they are."""
     now = datetime.now().astimezone()
-    session.add(Machine(id=SEED_MACHINE_ID, name="HAAS VF-2 #1", token=SEED_MACHINE_TOKEN))
-    session.flush()
-    session.add_all(CoreToolSlot(machine_id=SEED_MACHINE_ID, index=i, tool_number=t) for i, t in CORE_TOOLS.items())
-    session.add_all(
-        Tool(tool_number=n, description=d, measured_at=None if n in UNMEASURED else now) for n, d in TOOLS.items()
-    )
+    existing = set(session.scalars(select(Machine.id)))
+    for machine_id, name, token, core in MACHINES:
+        if machine_id in existing:
+            continue
+        session.add(Machine(id=machine_id, name=name, token=token))
+        session.flush()
+        session.add_all(CoreToolSlot(machine_id=machine_id, index=i, tool_number=t) for i, t in core.items())
+    if not session.scalar(select(Tool).limit(1)):
+        session.add_all(
+            Tool(tool_number=n, description=d, measured_at=None if n in UNMEASURED else now) for n, d in TOOLS.items()
+        )
     session.commit()
 
 

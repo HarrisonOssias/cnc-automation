@@ -1,3 +1,9 @@
+x-agent: &agent
+  build: { context: ., target: agent }
+  environment: &agent-env
+    BACKEND_URL: http://backend:8000
+    MQTT_HOST: rabbitmq
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -34,6 +40,7 @@ services:
       MINIO_ROOT_USER: forge
       MINIO_ROOT_PASSWORD: forge-secret
       MINIO_SITE_REGION: ca-central-1
+      MINIO_BROWSER: "on" # the Bitnami image turns the web console off by default
     ports:
       - "9000:9000" # S3 API (signed download links point here)
       - "9001:9001" # MinIO console
@@ -84,20 +91,41 @@ services:
     depends_on:
       - backend
 
-  # Simulates the Raspberry Pi on one machine. Open http://localhost:8080 for its kiosk.
-  agent:
-    build: { context: ., target: agent }
+  # Simulated Raspberry Pis, one per machine, each with its own kiosk, SQLite volume, MQTT client and token.
+  # Machines and tokens are seeded in source/cloud/backend/db.py (MACHINES). To add one: add it there,
+  # copy a block below with a new id, token, port and volume, then `docker compose up -d`.
+  agent: # kiosk: http://localhost:8080
+    <<: *agent
     environment:
+      <<: *agent-env
       MACHINE_ID: haas-vf2-01
       MACHINE_TOKEN: dev-token
-      BACKEND_URL: http://backend:8000
-      MQTT_HOST: rabbitmq
-    ports:
-      - "8080:8080"
-    volumes:
-      - agent-data:/data
+    ports: ["8080:8080"]
+    volumes: ["agent-data:/data"]
+
+  agent-2: # kiosk: http://localhost:8081
+    <<: *agent
+    environment:
+      <<: *agent-env
+      MACHINE_ID: haas-vf2-02
+      HAAS_STUB_TABLE: "[37,27,-1,77,17,312,120,130,-1,99,327,350,-1,150,321,325,366,58,295,-1,-1,-1,100,159,15,16,108,18,19,20,90]" # first start only; core tools in place
+      MACHINE_TOKEN: dev-token-2
+    ports: ["8081:8080"]
+    volumes: ["agent-2-data:/data"]
+
+  agent-3: # kiosk: http://localhost:8082
+    <<: *agent
+    environment:
+      <<: *agent-env
+      MACHINE_ID: haas-vf4-01
+      HAAS_STUB_TABLE: "[37,27,-1,77,108,312,120,130,-1,99,327,18,-1,150,321,325,-1,58,295,-1,-1,-1,100,159,15,16,17,350,19,20,90]" # first start only; core tools in place
+      MACHINE_TOKEN: dev-token-3
+    ports: ["8082:8080"]
+    volumes: ["agent-3-data:/data"]
 
 volumes:
   pgdata:
   agent-data:
+  agent-2-data:
+  agent-3-data:
   minio-data:
